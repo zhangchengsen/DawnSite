@@ -1,9 +1,10 @@
 <template>
-  <n-carousel show-arrow>
+  <n-carousel show-arrow class="mb-6">
     <img
       v-for="(item, index) in data"
       :key="index"
       class="carousel-img"
+      @click="$commonOpen(item)"
       :src="item.src"
     />
   </n-carousel>
@@ -22,5 +23,6 @@ defineProps({
   width: 100%;
   height: 400px;
   object-fit: cover;
+  @apply rounded cursor-pointer;
 }
 </style>

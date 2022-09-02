@@ -14,27 +14,39 @@
           {{ item.name }}
         </UiMenuItem>
       </UiMenu>
-      <NButton circle class="ml-auto mr-3">
+      <NButton circle class="ml-auto mr-3" @click="openSearchBar">
         <template #icon>
           <NIcon>
             <Search size="40" />
           </NIcon>
         </template>
       </NButton>
-      <n-dropdown trigger="hover" :options="options">
+
+      <nuxt-link to="/login" v-if="!user">
+        <NButton secondary strong> 登录 </NButton>
+      </nuxt-link>
+      <n-dropdown
+        trigger="hover"
+        :options="options"
+        @select="handleSelect"
+        v-else
+      >
         <n-avatar
           size="small"
           circle
-          src="https://07akioni.oss-cn-beijing.aliyuncs.com/07akioni.jpeg"
+          :src="
+            user.avatar ||
+            'https://07akioni.oss-cn-beijing.aliyuncs.com/07akioni.jpeg'
+          "
         />
       </n-dropdown>
-      <!-- <NButton secondary strong> 登录 </NButton> -->
     </div>
   </div>
   <div class="w-[100%] h-[80px]"></div>
+  <SearchBar ref="SearchBarRef"></SearchBar>
 </template>
 <script setup>
-import { NButton, NDropdown, NAvatar } from "naive-ui";
+import { NButton, NDropdown, NAvatar, createDiscreteApi } from "naive-ui";
 import { NIcon } from "naive-ui";
 import { Search } from "@vicons/ionicons5";
 const options = [
@@ -47,6 +59,7 @@ const options = [
     key: "exit",
   },
 ];
+const user = useUser();
 const route = useRoute();
 const menus = ref([
   {
@@ -107,6 +120,23 @@ function isMenuItemActive(item) {
     return idx !== -1;
   }
   return false;
+}
+const SearchBarRef = ref(null);
+function openSearchBar() {
+  SearchBarRef.value.open();
+}
+function handleSelect(key) {
+  if (key === "exit") {
+    const { dialog } = createDiscreteApi(["dialog"]);
+    dialog.warning({
+      content: "是否要退出登录",
+      positiveText: "退出",
+      negativeText: "取消",
+      onPositiveClick: async () => {
+        await useLogout();
+      },
+    });
+  }
 }
 function handleOpen(path) {
   navigateTo(path);
