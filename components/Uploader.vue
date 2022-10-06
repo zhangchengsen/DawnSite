@@ -18,10 +18,10 @@
         name="file"
         :data="data"
         list-type="image-card"
-        :max="1"
+        :max="max"
+        :multiple="max > 1"
         :on-error="handleError"
         :on-finish="handleSuccess"
-        :multiple="false"
       />
     </ClientOnly>
   </div>
@@ -31,9 +31,13 @@ import { NSpin, NUpload, createDiscreteApi } from "naive-ui";
 const { action, headers } = useUploadConfig();
 
 const props = defineProps({
-  modelValue: String,
+  modelValue: [String, Array],
   data: {
     type: Object,
+  },
+  max: {
+    type: Number,
+    default: 1,
   },
 });
 
@@ -57,16 +61,25 @@ const handleError = (e) => {
 
 // 初始化filelist
 function initFileList() {
-  fileList.value = props.modelValue
-    ? [
-        {
-          id: props.modelValue,
-          name: props.modelValue,
-          status: "finished",
-          url: props.modelValue,
-        },
-      ]
-    : [];
+  if (typeof props.modelValue == "string")
+    fileList.value = props.modelValue
+      ? [
+          {
+            id: props.modelValue,
+            name: props.modelValue,
+            status: "finished",
+            url: props.modelValue,
+          },
+        ]
+      : [];
+  else {
+    fileList.value = props.modelValue.map((url) => ({
+      id: url,
+      name: url,
+      status: "finished",
+      url,
+    }));
+  }
 }
 
 // 监听fileList变化
@@ -90,6 +103,6 @@ function updateModelValue() {
       urls.push(o.url);
     }
   });
-  emit("update:modelValue", urls[0] || "");
+  emit("update:modelValue", props.max == 1 ? urls[0] || "" : urls);
 }
 </script>

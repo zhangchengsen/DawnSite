@@ -1,7 +1,40 @@
 <template>
   <LoadingGroup :pending="pending" :error="error">
-    <section class="detail-top">
-      <n-image :src="data.cover" object-fit="cover" class="image" />
+    <section
+      class="py-4"
+      v-if="
+        data.isbuy &&
+        ((data.type != 'media' && type === 'course') || type === 'live')
+      "
+    >
+      <ClientOnly>
+        <template #fallback>
+          <LoadingSkeletion></LoadingSkeletion>
+        </template>
+        <PlayerAudio
+          v-if="data.type == 'audio'"
+          :url="data.content"
+          :title="data.title"
+          :cover="data.cover"
+        ></PlayerAudio>
+        <PlayerVideo
+          v-else-if="data.type == 'video'"
+          :url="data.content"
+        ></PlayerVideo>
+        <PlayerLive
+          v-else-if="data.type == 'live'"
+          :url="data.playUrl"
+        ></PlayerLive>
+      </ClientOnly>
+    </section>
+
+    <section class="detail-top" v-else>
+      <n-image
+        :src="data.cover"
+        object-fit="cover"
+        class="image"
+        :class="{ 'book-image': type === 'book' }"
+      />
       <div class="info">
         <div class="flex flex-col items-start">
           <div class="flex items-center">
@@ -10,23 +43,63 @@
           </div>
           <p class="my-2 text-xs text-gray-400">{{ subTitle }}</p>
           <!-- 领取优惠券 -->
-          <CouponModal />
-          <div v-if="!data.isbuy">
-            <Price :value="data.price" class="text-xl" />
-            <Price :value="data.t_price" through class="ml-1 text-xs" />
-          </div>
+          <template v-if="!data.isbuy">
+            <DetailActiveBar
+              :data="data"
+              v-if="data.group || data.flashsale"
+            ></DetailActiveBar>
+            <!-- v-if="" -->
+
+            <template v-else>
+              <CouponModal v-if="type != 'live'" />
+              <LiveStatusBar
+                :start="data.start_time"
+                :end="data.end_time"
+                v-else
+              ></LiveStatusBar>
+              <div>
+                <Price :value="data.price" class="text-xl" />
+                <Price :value="data.t_price" through class="ml-1 text-xs" />
+              </div>
+            </template>
+          </template>
         </div>
 
         <div class="mt-auto" v-if="!data.isbuy">
-          <n-button type="primary" :loading="loading" @click="buy"
-            >立即学习</n-button
-          >
+          <template v-if="type === 'book'">
+            <template v-if="menus.length > 0">
+              <div>
+                <n-button type="primary" :loading="loading" @click="buy"
+                  >立即学习</n-button
+                >
+                <n-button
+                  strong
+                  secondary
+                  type="primary"
+                  class="ml-2"
+                  v-if="freeId"
+                  @click="learn({ id: freeId })"
+                  >免费试看</n-button
+                >
+              </div>
+            </template>
+
+            <n-button v-else type="primary" disabled>敬请期待</n-button>
+          </template>
+
+          <n-button v-else type="primary" :loading="loading" @click="buy">{{
+            btn
+          }}</n-button>
         </div>
       </div>
     </section>
 
     <n-grid :x-gap="20">
       <n-grid-item :span="18">
+        <DetailGroupWorks
+          v-if="!data.isbuy && data.group"
+          :group_id="data.group.id"
+        />
         <section class="detail-bottom">
           <UiTab class="border-b">
             <UiTabItem
@@ -47,14 +120,14 @@
 
           <DetailMenu v-else>
             <DetailMenuItem
-              v-for="(item, index) in data.column_courses"
+              v-for="(item, index) in menus"
               :key="index"
               :item="item"
               :index="index"
               @click="learn(item)"
             />
 
-            <Empty v-if="data.column_courses.length == 0" desc="暂无目录" />
+            <Empty v-if="!menus || menus.length == 0" desc="暂无目录" />
           </DetailMenu>
         </section>
       </n-grid-item>
@@ -68,18 +141,23 @@
 import { NImage, NButton, NGrid, NGridItem, createDiscreteApi } from "naive-ui";
 const route = useRoute();
 const { id, type } = route.params;
-
 const { tabs, tab, changeTab } = useInitDetailTabs(type);
-
 // 获取请求参数
 const query = useRequestQuery();
 
 const { data, error, pending, refresh } = await useReadDetailApi(type, query);
 
 const title = computed(() => (!pending.value ? data.value?.title : "详情页"));
-
+const btn = computed(() => {
+  if (data.value.group) {
+    return "立即拼团";
+  } else if (data.value.flashsale) {
+    return "立即秒杀";
+  }
+  return "立即学习";
+});
 useHead({ title });
-
+useInitHead();
 const o = {
   media: "图文",
   video: "视频",
@@ -113,6 +191,36 @@ const buy = () => {
 
       return;
     }
+    //发起拼团
+    if (data.value.group) {
+      loading.value = true;
+      useCreateOrderApi({ group_id: data.value.group.id }, "group")
+        .then((res) => {
+          if (!res.error.value) {
+            navigateTo(`/pay?no=${res.data.value.no}`);
+          }
+        })
+        .finally(() => {
+          loading.value = false;
+        });
+      return;
+    }
+    //付费
+    let ty = "course";
+    let id = data.value.id;
+    if (type === "book") {
+      ty = "book";
+    } else if (type == "live") {
+      ty = live;
+    } else if (type == "column") {
+      ty = "column";
+    }
+    if (data.value.flashsale) {
+      ty = "flashsale";
+      id = data.value.flashsale.id;
+    }
+
+    navigateTo(`/createorder?id=${id}&type=${ty}`);
   });
 };
 
@@ -120,6 +228,7 @@ const buy = () => {
 const learn = (item) => {
   useHashAuth(() => {
     const { message } = createDiscreteApi(["message"]);
+    //专栏
     if (type == "column" && item.price != 0 && !data.value.isbuy) {
       return message.error("请先购买该专栏");
     }
@@ -127,20 +236,36 @@ const learn = (item) => {
     let url = "";
     if (type == "column") {
       url = `/detail/course/${item.id}?column_id=${data.value.id}`;
+    } else if (type == "book") {
+      url = `/book/${data.value.id}/${item.id}`;
     }
     navigateTo(url);
   });
 };
-
+const freeId = computed(() => {
+  let fid = 0;
+  if (type === "book" && data.value) {
+    let item = data.value.book_details.find((o) => o.isfree == 1);
+    if (item) {
+      fid = item.id;
+    }
+  }
+  return fid;
+});
 // 获取query
 function useRequestQuery() {
-  const { column_id } = route.query;
+  const { column_id, flashsale_id, group_id } = route.query;
 
   let query = {
     id,
   };
   if (column_id) {
     query.column_id = column_id;
+  }
+  if (flashsale_id) {
+    query.flashsale_id = flashsale_id;
+  } else if (group_id) {
+    query.group_id = group_id;
   }
   return query;
 }
@@ -175,6 +300,46 @@ function useInitDetailTabs(t) {
     changeTab,
   };
 }
+const menus = computed(() =>
+  type === "book"
+    ? data?.value?.book_details
+    : data?.value?.column_courses || []
+);
+//初始化head
+function useInitHead() {
+  if (type === "course") {
+    useHead({
+      link: [
+        {
+          rel: "stylesheet",
+          href: "/aplayer/APlayer.min.css",
+        },
+      ],
+      script: [
+        {
+          src: "/aplayer/APlayer.min.js",
+        },
+        {
+          src: "//unpkg.byted-static.com/xgplayer/2.31.2/browser/index.js",
+        },
+        {
+          src: "//unpkg.byted-static.com/xgplayer-flv/2.5.1/dist/index.min.js",
+        },
+      ],
+    });
+  } else if (type === "live") {
+    useHead({
+      script: [
+        {
+          src: "//unpkg.byted-static.com/xgplayer/2.31.2/browser/index.js",
+        },
+        {
+          src: "//unpkg.byted-static.com/xgplayer-flv/2.5.1/dist/index.min.js",
+        },
+      ],
+    });
+  }
+}
 </script>
 <style>
 .detail-top {
@@ -182,6 +347,9 @@ function useInitDetailTabs(t) {
 }
 .detail-top .image {
   @apply rounded w-[340px] h-[200px] mr-5;
+}
+.detail-top .book-image {
+  @apply rounded w-[130px] h-[180px]  mr-8 ml-3;
 }
 
 .detail-top .info {

@@ -1,11 +1,20 @@
 <template>
-  <li class="detail-menu-item" @click="emits('click')">
-    <n-tag type="info" :bordered="false" size="small" class="mr-3">{{
-      o[item.type]
-    }}</n-tag>
+  <li
+    class="detail-menu-item"
+    @click="emits('click')"
+    :class="{ active: active }"
+  >
+    <n-tag
+      v-if="item.type"
+      type="info"
+      :bordered="false"
+      size="small"
+      class="mr-3"
+      >{{ o[item.type] }}</n-tag
+    >
     章节{{ index + 1 }}.{{ item.title }}
     <n-tag
-      v-if="item.price == 0"
+      v-if="item.price == 0 || item.isfree"
       type="success"
       :bordered="false"
       size="small"
@@ -21,6 +30,10 @@ const emits = defineEmits(["click"]);
 const props = defineProps({
   item: Object,
   index: Number,
+  active: {
+    default: false,
+    type: Boolean,
+  },
 });
 const o = {
   media: "图文",
@@ -31,5 +44,8 @@ const o = {
 <style>
 .detail-menu-item {
   @apply flex p-5 border-b cursor-pointer text-sm  hover:(!bg-gray-100) active:(!bg-gray-200);
+}
+.active {
+  @apply bg-gray-200;
 }
 </style>

@@ -1,20 +1,17 @@
 <template>
-  <div class="countdown">
-    <small>{{ data.days }}</small
-    >天 <small>{{ data.hours }}</small
-    >:<small>{{ data.minutes }}</small
-    >:
-    <small>{{ data.seconds }}</small>
-  </div>
+  <client-only>
+    <div class="countdown">
+      <small>{{ data.days }}</small
+      >天 <small>{{ data.hours }}</small
+      >:<small>{{ data.minutes }}</small
+      >:
+      <small>{{ data.seconds }}</small>
+    </div>
+  </client-only>
 </template>
 <script setup>
 const emits = defineEmits(["start", "end"]);
-const props = defineProps({
-  time: {
-    type: [String, Number],
-    default: "",
-  },
-});
+const props = defineProps(["time"]);
 const data = useCountDown(props.time);
 function useCountDown(end_time) {
   const timeout = ref(0);
@@ -22,13 +19,18 @@ function useCountDown(end_time) {
   if (typeof end_time === "string") {
     end_time = new Date(end_time).getTime();
   }
+
   timeout.value = (end_time - new Date()) / 1000;
-  if (timeout.value <= 0) return emits("end");
+  if (timeout.value < 0) {
+    return emits("end");
+  }
   Timer.value = setInterval(() => {
     timeout.value--;
     //如果timeout <= 0 关闭定时器
-    close();
-    emits("end");
+    if (timeout.value < 0) {
+      close();
+      emits("end");
+    }
   }, 1000);
   function close() {
     if (Timer.value) {
@@ -53,6 +55,7 @@ function formatDiffDate(seconds) {
 
   if (seconds > 0) {
     time.days = Math.floor(seconds / (60 * 60 * 24));
+
     time.hours = Math.floor(seconds / (60 * 60)) - time.days * 24;
     time.minutes =
       Math.floor(seconds / 60) - time.days * 24 * 60 - time.hours * 60;
@@ -63,11 +66,12 @@ function formatDiffDate(seconds) {
       time.minutes * 60;
   }
 
-  //手动三元补零
   time.days = time.days < 10 ? "0" + time.days : time.days;
   time.hours = time.hours < 10 ? "0" + time.hours : time.hours;
   time.minutes = time.minutes < 10 ? "0" + time.minutes : time.minutes;
   time.seconds = time.seconds < 10 ? "0" + time.seconds : time.seconds;
+
+  //手动三元补零
 
   return time;
 }

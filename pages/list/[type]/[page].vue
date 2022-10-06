@@ -7,11 +7,13 @@
     </n-breadcrumb>
     <LoadingGroup :error="error" :pending="pending">
       <template #loading>
-        <LoadingCourseSkeletion></LoadingCourseSkeletion>
+        <LoadingBookSkelection v-if="type === 'book'"></LoadingBookSkelection>
+        <LoadingCourseSkeletion v-else></LoadingCourseSkeletion>
       </template>
-      <n-grid x-gap="20" :cols="4">
+      <n-grid x-gap="20" :cols="type === 'book' ? 2 : 4">
         <n-gi v-for="(item, index) in rows" :key="index">
-          <CourseList :item="item"></CourseList>
+          <BookList v-if="type === 'book'" :item="item"></BookList>
+          <CourseList v-else :item="item"></CourseList>
         </n-gi>
       </n-grid>
       <div class="flex justify-center items-center mt-5 mb-10">
@@ -52,10 +54,15 @@ function handleClick(value) {
 
 const { page, limit, total, handlePageChange, rows, pending, error, refresh } =
   await usePage(({ page, limit }) => {
-    return useListApi(type, {
+    let query = {
       page,
-    });
+    };
+    if (type === "group" || type === "flashsale") {
+      query.usable = 1;
+    }
+    return useListApi(type, query);
   });
+console.log("type", type, "data", rows.value);
 definePageMeta({
   middleware: ["list"],
 });

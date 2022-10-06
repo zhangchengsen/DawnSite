@@ -13,6 +13,9 @@
   },
   "dependencies": {
     "@css-render/vue3-ssr": "^0.15.11",
-    "naive-ui": "^2.33.0"
+    "aplayer": "^1.10.1",
+    "naive-ui": "^2.33.0",
+    "qrcode": "^1.5.1",
+    "xgplayer": "^2.32.0"
   }
 }

@@ -21,3 +21,17 @@ export function useEnterEvent(event) {
     onBeforeUnmount(() => document.removeEventListener("keydown", handleEnterEvent))
 }
 
+export function useTimeStatus(start, end) {
+    start = (new Date(start)).getTime()
+    end = (new Date(end)).getTime()
+    let status = ''
+    const now = Date.now()
+    if (start < now && now < end) {
+        status = 'ing'
+    } else if (start >= now) {
+        status = 'pending'
+    } else {
+        status = "end"
+    }
+    return status
+}

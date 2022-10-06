@@ -1,6 +1,6 @@
 <template>
   <div class="border-b p-5">
-    <div class="cursor-pointer text-gray-600" @click="open">
+    <div class="cursor-pointer text-gray-600" @click.stop="open">
       <n-tag v-if="item.is_top" size="small" type="success">置顶</n-tag>
       {{ item.desc.text }}
     </div>
@@ -44,7 +44,13 @@
       <n-button class="mr-3" text size="tiny"
         >作者：{{ item.user.name }}</n-button
       >
-      <n-button type="error" class="mr-3" size="tiny" @click="deleteItem">
+      <n-button
+        type="error"
+        class="mr-3"
+        size="tiny"
+        v-if="showDel"
+        @click="deleteItem"
+      >
         删除
       </n-button>
     </div>
@@ -55,6 +61,10 @@ import { NTag, NIcon, NButton, createDiscreteApi, NImage } from "naive-ui";
 import { ThumbsUpSharp, ChatboxEllipsesOutline } from "@vicons/ionicons5";
 const props = defineProps({
   item: Object,
+  showDel: {
+    type: Boolean,
+    default: true,
+  },
 });
 const { supportLoading, handleSupport } = useHandleSupport();
 const emits = defineEmits(["delete"]);

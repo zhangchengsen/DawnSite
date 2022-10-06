@@ -1,7 +1,7 @@
 <template>
   <n-card class="coupon" :class="{ 'coupon-disabled': isgetcoupon }">
     <h4>￥{{ item.price }}</h4>
-    <p>适用{{ o[item.type] + " : " + item.title }}</p>
+    <p>适用{{ o[item.type] + " : " + item.value.title }}</p>
     <p class="!text-xs mt-3">
       有效期：
       <n-time :time="new Date(item.start_time)"></n-time>~
